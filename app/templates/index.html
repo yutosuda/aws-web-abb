@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}ホーム - 画像ギャラリー{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-images me-2"></i>画像ギャラリー</h1>
+            <a href="{{ url_for('upload.upload_form') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>新しい画像をアップロード
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if images.items %}
+    <!-- 画像グリッド -->
+    <div class="row">
+        {% for image in images.items %}
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-4">
+                <div class="card h-100 shadow-sm">
+                    <div class="card-img-top position-relative" style="height: 200px; overflow: hidden;">
+                        <!-- 実際の画像を表示 -->
+                        <img src="{{ url_for('main.uploaded_file', filename=image.filename) }}" 
+                             alt="{{ image.original_filename }}" 
+                             class="img-fluid w-100 h-100" 
+                             style="object-fit: cover; object-position: center;"
+                             onerror="this.onerror=null; this.src='data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGVlMmU2Ii8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCwgc2Fucy1zZXJpZiIgZm9udC1zaXplPSIxNCIgZmlsbD0iIzZjNzU3ZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPuOCqOODqeODvDwvdGV4dD48L3N2Zz4=';">
+                        
+                        <!-- 画像タイプバッジ -->
+                        <span class="position-absolute top-0 end-0 m-2">
+                            <span class="badge bg-dark bg-opacity-75">
+                                {{ image.content_type.split('/')[-1].upper() }}
+                            </span>
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <h6 class="card-title text-truncate" title="{{ image.original_filename }}">
+                            {{ image.original_filename }}
+                        </h6>
+                        <p class="card-text">
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>{{ image.upload_date.strftime('%Y/%m/%d %H:%M') }}<br>
+                                <i class="fas fa-weight me-1"></i>{{ "%.1f"|format(image.file_size / 1024) }} KB
+                            </small>
+                        </p>
+                        {% if image.description %}
+                            <p class="card-text">
+                                <small>{{ image.description[:50] }}{% if image.description|length > 50 %}...{% endif %}</small>
+                            </p>
+                        {% endif %}
+                    </div>
+                    <div class="card-footer bg-transparent">
+                        <div class="d-flex gap-2">
+                            <a href="{{ url_for('main.image_detail', image_id=image.id) }}" class="btn btn-outline-primary btn-sm flex-fill">
+                                <i class="fas fa-eye me-1"></i>詳細
+                            </a>
+                            <a href="{{ url_for('main.uploaded_file', filename=image.filename) }}" 
+                               target="_blank" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- ページネーション -->
+    {% if images.pages > 1 %}
+        <nav aria-label="画像ページネーション">
+            <ul class="pagination justify-content-center">
+                {% if images.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.index', page=images.prev_num) }}">
+                            <i class="fas fa-chevron-left"></i> 前へ
+                        </a>
+                    </li>
+                {% endif %}
+                
+                {% for page_num in images.iter_pages() %}
+                    {% if page_num %}
+                        {% if page_num != images.page %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url_for('main.index', page=page_num) }}">{{ page_num }}</a>
+                            </li>
+                        {% else %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% endif %}
+                    {% else %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if images.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('main.index', page=images.next_num) }}">
+                            次へ <i class="fas fa-chevron-right"></i>
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+
+{% else %}
+    <!-- 画像がない場合 -->
+    <div class="text-center py-5">
+        <i class="fas fa-images fa-5x text-muted mb-3"></i>
+        <h3 class="text-muted">まだ画像がアップロードされていません</h3>
+        <p class="text-muted mb-4">最初の画像をアップロードして、ギャラリーを始めましょう！</p>
+        <a href="{{ url_for('upload.upload_form') }}" class="btn btn-primary btn-lg">
+            <i class="fas fa-upload me-2"></i>画像をアップロード
+        </a>
+    </div>
+{% endif %}
+{% endblock %} 

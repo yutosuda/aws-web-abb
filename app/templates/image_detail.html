@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+
+{% block title %}{{ image.original_filename }} - 画像詳細{% endblock %}
+
+{% block extra_css %}
+<style>
+    .image-container {
+        max-height: 70vh;
+        overflow: hidden;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .image-detail {
+        max-width: 100%;
+        height: auto;
+        display: block;
+        margin: 0 auto;
+    }
+    
+    .info-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+    }
+    
+    .info-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #495057;
+    }
+    
+    .info-value {
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- ナビゲーション -->
+        <nav aria-label="breadcrumb" class="mb-4">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item">
+                    <a href="{{ url_for('main.index') }}">
+                        <i class="fas fa-home me-1"></i>ホーム
+                    </a>
+                </li>
+                <li class="breadcrumb-item active" aria-current="page">
+                    {{ image.original_filename }}
+                </li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- 画像表示エリア -->
+    <div class="col-lg-8 mb-4">
+        <div class="image-container">
+            <img src="{{ url_for('main.uploaded_file', filename=image.filename) }}" 
+                 alt="{{ image.original_filename }}" 
+                 class="image-detail img-fluid"
+                 onerror="this.onerror=null; this.parentElement.innerHTML='<div class=\'d-flex align-items-center justify-content-center h-100 bg-light\'><i class=\'fas fa-exclamation-triangle fa-3x text-muted\'></i></div>';">
+        </div>
+        
+        <!-- 画像操作ボタン -->
+        <div class="d-flex gap-2 mt-3">
+            <a href="{{ url_for('main.uploaded_file', filename=image.filename) }}" 
+               target="_blank" class="btn btn-primary">
+                <i class="fas fa-external-link-alt me-1"></i>新しいタブで開く
+            </a>
+            <a href="{{ url_for('main.uploaded_file', filename=image.filename) }}" 
+               download="{{ image.original_filename }}" class="btn btn-outline-secondary">
+                <i class="fas fa-download me-1"></i>ダウンロード
+            </a>
+            <button class="btn btn-outline-info" onclick="copyImageUrl()">
+                <i class="fas fa-copy me-1"></i>URLをコピー
+            </button>
+        </div>
+    </div>
+    
+    <!-- 画像情報エリア -->
+    <div class="col-lg-4">
+        <div class="info-card">
+            <h5 class="mb-3">
+                <i class="fas fa-info-circle me-2"></i>画像情報
+            </h5>
+            
+            <div class="info-item">
+                <span class="info-label">ファイル名</span>
+                <span class="info-value">{{ image.original_filename }}</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">ファイル形式</span>
+                <span class="info-value">
+                    <span class="badge bg-secondary">{{ image.content_type }}</span>
+                </span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">ファイルサイズ</span>
+                <span class="info-value">{{ "%.1f"|format(image.file_size / 1024) }} KB</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">アップロード日時</span>
+                <span class="info-value">{{ image.upload_date.strftime('%Y年%m月%d日 %H:%M') }}</span>
+            </div>
+            
+            <div class="info-item">
+                <span class="info-label">画像ID</span>
+                <span class="info-value">#{{ image.id }}</span>
+            </div>
+        </div>
+        
+        <!-- 説明文 -->
+        {% if image.description %}
+        <div class="info-card mt-3">
+            <h6 class="mb-2">
+                <i class="fas fa-comment me-2"></i>説明
+            </h6>
+            <p class="mb-0">{{ image.description }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- アクションボタン -->
+        <div class="d-grid gap-2 mt-3">
+            <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-1"></i>ギャラリーに戻る
+            </a>
+            <!-- 将来の機能: 編集・削除ボタン -->
+            <!--
+            <button class="btn btn-outline-warning" disabled>
+                <i class="fas fa-edit me-1"></i>編集（準備中）
+            </button>
+            <button class="btn btn-outline-danger" disabled>
+                <i class="fas fa-trash me-1"></i>削除（準備中）
+            </button>
+            -->
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyImageUrl() {
+    const imageUrl = "{{ url_for('main.uploaded_file', filename=image.filename, _external=True) }}";
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        // モダンブラウザでの実装
+        navigator.clipboard.writeText(imageUrl).then(function() {
+            showToast('画像URLをクリップボードにコピーしました！', 'success');
+        }).catch(function(err) {
+            console.error('クリップボードへのコピーに失敗:', err);
+            fallbackCopyTextToClipboard(imageUrl);
+        });
+    } else {
+        // フォールバック実装
+        fallbackCopyTextToClipboard(imageUrl);
+    }
+}
+
+function fallbackCopyTextToClipboard(text) {
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.top = "0";
+    textArea.style.left = "0";
+    textArea.style.position = "fixed";
+    
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            showToast('画像URLをクリップボードにコピーしました！', 'success');
+        } else {
+            showToast('クリップボードへのコピーに失敗しました', 'error');
+        }
+    } catch (err) {
+        console.error('フォールバックコピーに失敗:', err);
+        showToast('クリップボードへのコピーに失敗しました', 'error');
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function showToast(message, type) {
+    // 簡易トースト通知
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.style.minWidth = '300px';
+    toast.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" onclick="this.parentElement.remove()"></button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // 3秒後に自動削除
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.remove();
+        }
+    }, 3000);
+}
+</script>
+{% endblock %} 

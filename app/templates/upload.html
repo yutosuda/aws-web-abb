@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block title %}画像アップロード - 画像ギャラリー{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: 10px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .upload-area:hover {
+        border-color: #0d6efd;
+        background-color: #f8f9fa;
+    }
+    
+    .upload-area.dragover {
+        border-color: #0d6efd;
+        background-color: #e7f3ff;
+    }
+    
+    .file-info {
+        display: none;
+        margin-top: 20px;
+    }
+    
+    .preview-image {
+        max-width: 200px;
+        max-height: 200px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">
+                    <i class="fas fa-upload me-2"></i>画像アップロード
+                </h4>
+            </div>
+            <div class="card-body">
+                <form id="uploadForm" action="{{ url_for('upload.upload_file') }}" method="post" enctype="multipart/form-data">
+                    {{ csrf_token() }}
+                    
+                    <!-- ファイル選択エリア -->
+                    <div class="upload-area" id="uploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h5>ファイルをドラッグ＆ドロップ</h5>
+                        <p class="text-muted">または、クリックしてファイルを選択</p>
+                        <input type="file" id="fileInput" name="file" accept="image/*" class="d-none" required>
+                        <button type="button" class="btn btn-outline-primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open me-1"></i>ファイルを選択
+                        </button>
+                    </div>
+                    
+                    <!-- ファイル情報表示 -->
+                    <div class="file-info" id="fileInfo">
+                        <div class="row align-items-center">
+                            <div class="col-md-4 text-center">
+                                <img id="previewImage" class="preview-image" src="" alt="プレビュー">
+                            </div>
+                            <div class="col-md-8">
+                                <h6>選択されたファイル:</h6>
+                                <p id="fileName" class="mb-1"></p>
+                                <p id="fileSize" class="text-muted mb-0"></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 説明文入力 -->
+                    <div class="mb-3 mt-4">
+                        <label for="description" class="form-label">
+                            <i class="fas fa-comment me-1"></i>説明文（任意）
+                        </label>
+                        <textarea class="form-control" id="description" name="description" rows="3" 
+                                  placeholder="画像の説明を入力してください..."></textarea>
+                    </div>
+                    
+                    <!-- アップロードボタン -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn" disabled>
+                            <i class="fas fa-upload me-2"></i>アップロード
+                        </button>
+                        <a href="{{ url_for('main.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>ギャラリーに戻る
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- アップロード制限の説明 -->
+        <div class="alert alert-info mt-4">
+            <h6><i class="fas fa-info-circle me-1"></i>アップロード制限</h6>
+            <ul class="mb-0">
+                <li>対応形式: JPG, PNG, GIF</li>
+                <li>最大ファイルサイズ: 5MB</li>
+                <li>一度に1つのファイルのみアップロード可能</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const previewImage = document.getElementById('previewImage');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const uploadBtn = document.getElementById('uploadBtn');
+    
+    // ドラッグ＆ドロップ機能
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadArea.classList.add('dragover');
+    });
+    
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+    });
+    
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadArea.classList.remove('dragover');
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            fileInput.files = files;
+            handleFileSelect(files[0]);
+        }
+    });
+    
+    // ファイル選択時の処理
+    fileInput.addEventListener('change', function(e) {
+        if (e.target.files.length > 0) {
+            handleFileSelect(e.target.files[0]);
+        }
+    });
+    
+    function handleFileSelect(file) {
+        // ファイル形式チェック
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            alert('対応していないファイル形式です。JPG、PNG、GIFファイルを選択してください。');
+            return;
+        }
+        
+        // ファイルサイズチェック（5MB）
+        if (file.size > 5 * 1024 * 1024) {
+            alert('ファイルサイズが大きすぎます。5MB以下のファイルを選択してください。');
+            return;
+        }
+        
+        // ファイル情報表示
+        fileName.textContent = file.name;
+        fileSize.textContent = `サイズ: ${(file.size / 1024).toFixed(1)} KB`;
+        
+        // プレビュー画像表示
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            previewImage.src = e.target.result;
+            fileInfo.style.display = 'block';
+            uploadBtn.disabled = false;
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    // フォーム送信時の処理
+    document.getElementById('uploadForm').addEventListener('submit', function(e) {
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>アップロード中...';
+        uploadBtn.disabled = true;
+    });
+});
+</script>
+{% endblock %} 
